@@ -58,25 +58,31 @@ class CPU:
             print("Usage: cpu.py loaded_program_name.ls8")
 
         # open the file
-        with open(filename, 'r') as f:
-            for line in f:
-                # only take code to the left of any comments
-                line = line.split("#")[0].strip()
-                # Skip past empty lines and commented lines
-                if line == '' or line[0][0] == '#':
-                    continue
-                # Since we're working in binary, have to set base to 2
-                try:
-                    self.ram[address] = int(line, 2)
-                # Raise error if not fed appropriate int
-                except ValueError:
-                    print(f'Invalid number: {line}')
-                    sys.exit(1)
-                address += 1
+        try:    # catch FileNotFound errors
+            with open(filename, 'r') as f:
+                for line in f:
+                    # only take code to the left of any comments
+                    line = line.split("#")[0].strip()
+                    # Skip past empty lines and commented lines
+                    if line == '' or line[0][0] == '#':
+                        continue
+                    # Since we're working in binary, have to set base to 2
+                    try:
+                        self.ram[address] = int(line, 2)
+                    # Raise error if not fed appropriate int
+                    except ValueError:
+                        print(f'Invalid number: {line}')
+                        sys.exit(1)
+                    address += 1
+        except FileNotFoundError:
+            print(f"Could not find file: {sys.argv[1]}")
+            sys.exit(1)
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
 
+        reg_a = reg_a & OOI
+        reg_b = reg_b & OOI
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
         elif op == "SUB":
@@ -163,7 +169,7 @@ class CPU:
                 if self.flag == HLT:
                     self.pc = self.reg[operand_a]
                 else:
-                    self.pc += 2 
+                    self.pc += 2
             elif IR == JNE:
                 if self.flag != HLT:
                     self.pc = self.reg[operand_a]

@@ -3,9 +3,9 @@
 """Main."""
 
 import sys
-from cpu import *
+from cpu_additions import *
 
 cpu = CPU()
 
-cpu.load()
+cpu.load(sys.argv[1]) # sys.argv[1]
 cpu.run()

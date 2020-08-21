@@ -38,6 +38,23 @@ class CPU:
         self.sp = 7
         # CPU running
         self.running = True
+        # create branchtable
+        self.branchtable = {
+            HLT: self.halt,
+            LDI: self.ldi,
+            PRN: self.print,
+            ADD: self.add,
+            SUB: self.subtract,
+            MUL: self.multiply,
+            PUSH: self.push,
+            POP: self.pop,
+            CALL: self.call,
+            RET: self._return,
+            CMP: self.compare,
+            JEQ: self.jump_if_equal,
+            JNE: self.jump_if_not_equal,
+            JMP: self.jump
+        }
 
     def ram_read(self, address):
         # return the ram at the specified, indexed address
@@ -105,10 +122,81 @@ class CPU:
         else:
             raise Exception("Unsupported ALU operation")
 
-    def ldi(self, reg, val):
-        reg = reg & OOI  # bitwise AND to prevent out-of-index
-        val = val & LIM  # bitwise AND to limit values
-        self.reg[reg] = val
+    def ldi(self, operand_a, operand_b):
+        operand_a = operand_a & OOI  # bitwise AND to prevent out-of-index
+        operand_b = operand_b & LIM  # bitwise AND to limit values
+        # IR = self.ram_read(self.pc)
+        self.reg[operand_a] = operand_b
+        # self.reg[operand_a] = operand_b
+        self.pc += 3
+
+    def print(self, operand_a, operand_b=None):
+        print(self.reg[operand_a])
+        self.pc += 2
+
+    def halt(self, operand_a=None, operand_b=None):
+        self.running = False
+
+    def add(self, operand_a, operand_b):
+        self.alu("ADD", operand_a, operand_b)
+        self.pc += 3
+
+    def subtract(self, operand_a, operand_b):
+        self.alu("SUB", operand_a, operand_b)
+        self.pc += 3
+
+    def multiply(self, operand_a, operand_b):
+        self.alu("MUL", operand_a, operand_b)
+        self.pc += 3
+
+    def compare(self, operand_a, operand_b):
+        self.alu("CMP", operand_a, operand_b)
+        self.pc += 3
+
+    def jump(self, operand_a, operand_b=None):
+        self.pc = self.reg[operand_a]
+
+    def jump_if_equal(self, operand_a, operand_b=None):
+        if self.flag == HLT:
+            self.pc = self.reg[operand_a]
+        else:
+            self.pc += 2
+
+    def jump_if_not_equal(self, operand_a, operand_b=None):
+        if self.flag != HLT:
+            self.pc = self.reg[operand_a]
+        else:
+            self.pc += 2
+
+    def push(self, operand_a, operand_b=None):
+        # decrement the stack pointer
+        self.reg[self.sp] -= 1
+        # store the value at that address
+        self.ram_write(self.reg[operand_a], self.reg[self.sp])
+        # increment the program counter
+        self.pc += 2
+
+    def pop(self, operand_a, operand_b=None):
+        # take the value that is stored at the top of the stack
+        self.reg[operand_a] = self.ram_read(self.reg[self.sp])
+        # increment the stack pointer
+        self.reg[self.sp] += 1
+        # increment the program counter
+        self.pc += 2
+
+    def call(self, operand_a, operand_b=None):
+        # decrement the stack pointer
+        self.reg[self.sp] -= 1
+        # push the address of the instruction after it onto the stack
+        self.ram_write(self.pc + 2, self.reg[self.sp])
+        # move the program counter to the subroutine address
+        self.pc = self.reg[operand_a]
+
+    def _return(self, operand_a=None, operand_b=None):
+        # pop the addr off the stack and store it in the prog counter
+        self.pc = self.ram_read(self.reg[self.sp])
+        # increment the stack pointer
+        self.reg[self.sp] += 1
 
     def trace(self):
         """
@@ -142,64 +230,4 @@ class CPU:
             operand_a = self.ram_read(self.pc + 1)
             operand_b = self.ram_read(self.pc + 2)
 
-            # perform the actions needed for instruction per the LS-8 spec
-            if IR == HLT:     # HALT
-                self.running = False
-            elif IR == LDI:   # LOAD IMMEDIATE
-                self.reg[operand_a] = operand_b
-                self.pc += 3
-            elif IR == PRN:   # PRINT
-                print(self.reg[operand_a])
-                self.pc += 2
-            elif IR == ADD:   # ADD
-                self.alu("ADD", operand_a, operand_b)
-                self.pc += 3
-            elif IR == SUB:   # SUBTRACT
-                self.alu("SUB", operand_a, operand_b)
-                self.pc += 3
-            elif IR == MUL:   # MULTIPLY
-                self.alu("MUL", operand_a, operand_b)
-                self.pc += 3
-            elif IR == CMP:
-                self.alu("CMP", operand_a, operand_b)
-                self.pc += 3
-            elif IR == JMP:
-                self.pc = self.reg[operand_a]
-            elif IR == JEQ:
-                if self.flag == HLT:
-                    self.pc = self.reg[operand_a]
-                else:
-                    self.pc += 2
-            elif IR == JNE:
-                if self.flag != HLT:
-                    self.pc = self.reg[operand_a]
-                else:
-                    self.pc += 2
-            elif IR == PUSH:
-                # decrement the stack pointer
-                self.reg[self.sp] -= 1
-                # store the value at that address
-                self.ram_write(self.reg[operand_a], self.reg[self.sp])
-                # increment the program counter
-                self.pc += 2
-            elif IR == POP:
-                # take the value that is stored at the top of the stack
-                self.reg[operand_a] = self.ram_read(self.reg[self.sp])
-                # increment the stack pointer
-                self.reg[self.sp] += 1
-                # increment the program counter
-                self.pc += 2
-            elif IR == CALL:
-                # decrement the stack pointer
-                self.reg[self.sp] -= 1
-                # push the address of the instruction after it onto the stack
-                self.ram_write(self.pc + 2, self.reg[self.sp])
-                # move the program counter to the subroutine address
-                self.pc = self.reg[operand_a]
-            elif IR == RET:
-                # pop the addr off the stack and store it in the prog counter
-                self.pc = self.ram_read(self.reg[self.sp])
-                # increment the stack pointer
-                self.reg[self.sp] += 1
-            else:
-                print("Instruction not valid")
+            self.branchtable[IR](operand_a, operand_b)

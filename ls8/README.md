@@ -65,6 +65,19 @@ but you'll have to implement those three above instructions first!
 * Read this whole file.
 * Skim the spec.
 
+
+* cpu.py: the main meat of the program, takes inputs and processes them.
+* ls8.py: loads the CPU and runs programs through it
+
+### Implemented:
+
+* ls8.py: runs the CPU
+* cpu.py: some example code
+
+### TODO:
+
+* cpu.py: internal registers, internal memory, processing opcodes.
+
 ## Step 1: Add the constructor to `cpu.py`
 
 Add list properties to the `CPU` class to hold 256 bytes of memory and 8
